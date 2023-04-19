@@ -1,0 +1,59 @@
+import pandas as pd
+# IMPORTING 1st SHEET
+df_1 = pd.read_excel("C:\\Users\\Sammy\\Downloads\\Python Assignment.xlsx",
+                 sheet_name = '(Input) User IDs')
+col_1 = list(df_1.iloc[9, 3:8])
+df_1 = df_1.iloc[10:31, 3:8]
+df_1.columns = col_1
+
+# IMPORTING 2nd SHEET
+df_2 = pd.read_excel("C:\\Users\\Sammy\\Downloads\\Python Assignment.xlsx",
+                 sheet_name = '(Input) Rigorbuilder RAW')
+col_2 = list(df_2.iloc[6, 2:7])
+df_2 = df_2.iloc[7:28, 2:7]
+df_2.columns = col_2
+df_2 = df_2.rename(columns = {'name':'Name',
+                              'uid': 'User ID'})
+
+# MERGING SHEETS 1 and 2
+df_12 = df_1.merge(df_2, how = 'outer')
+
+# CREATING A DATAFRAME OF AVERAGE STATEMENTS
+avg_stmts = round(df_12.loc[:,['Team Name', 'total_statements']].groupby(
+    ['Team Name']).mean(), 2)
+avg_stmts = avg_stmts.sort_values(by = ['total_statements'], ascending = False)
+avg_stmts['Team'] = avg_stmts.index
+
+# CREATING A DATAFRAME OF AVERAGE REASONS
+avg_reasons = round(df_12.loc[:,['Team Name', 'total_reasons']].groupby(
+    ['Team Name']).mean(), 2)
+avg_reasons['Team'] = avg_reasons.index
+avg_reasons = avg_reasons.sort_values(by = ['total_reasons'], ascending = False)
+
+# MERGING STATEMENTS AND REASONS DF
+avg = avg_stmts.merge(avg_reasons, how = 'outer')
+avg = avg.loc[:, ['Team','total_statements', 'total_reasons']]
+
+# SORTING THE DATAFRAME
+sorted_indices = (avg["total_statements"] + avg["total_reasons"]).sort_values(ascending = False).index
+avg = avg.loc[sorted_indices, :]
+
+# LEADERBOARD TEAM
+avg['Team Rank'] = range(1, (len(avg.iloc[:, 1]))+1)
+avg.set_index('Team Rank', inplace = True)
+
+avg = avg.rename(columns = {'Team': 'Thinking Teams Leaderboard',
+                            'total_statements': 'Average Statements',
+                             'total_reasons': 'Average Reasons'})
+
+# LEADERBOARD INDIVIDUAL
+sort_indices2 = (df_2['total_statements'] + df_2['total_reasons']).sort_values(ascending = False).index
+df_2 = df_2.loc[sort_indices2, :]
+df_2['S No'] = range(1, (len(df_2.iloc[:, 1]))+1)
+df_2 = df_2.rename(columns = {'S No': 'Rank'})
+df_2.set_index('Rank', inplace = True)
+
+# WRITING TO EXCEL FILES
+with pd.ExcelWriter('C:\\Users\\Sammy\\Downloads\\Python_Assignment_Output.xlsx') as writer:
+    avg.to_excel(writer, sheet_name='Output1')
+    df_2.to_excel(writer, sheet_name='Output2')
